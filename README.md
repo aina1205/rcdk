@@ -1,6 +1,3 @@
-fork of Richard L. Apodaca's RCDK gem
-
-
 =RCDK - The Ruby Interface for the Chemistry Development Kit (CDK)
 RCDK makes it possible to use the Chemistry Development Kit (CDK)
 from Ruby. CDK is a Java library for chemical informatics.
