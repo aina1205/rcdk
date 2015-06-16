@@ -24,111 +24,62 @@
 
 require 'rcdk'
 
-jrequire 'java.io.StringReader'
-jrequire 'java.io.StringWriter'
-jrequire 'org.openscience.cdk.io.MDLWriter'
-jrequire 'org.openscience.cdk.io.MDLReader'
+
 jrequire 'org.openscience.cdk.smiles.SmilesParser'
 jrequire 'org.openscience.cdk.smiles.SmilesGenerator'
 jrequire 'org.openscience.cdk.DefaultChemObjectBuilder'
 jrequire 'org.openscience.cdk.Molecule'
 jrequire 'org.openscience.cdk.layout.StructureDiagramGenerator'
-jrequire 'org.openscience.cdk.io.CMLReader'
-jrequire 'org.openscience.cdk.ChemFile'
-jrequire 'net.sf.structure.cdk.util.ImageKit'
-jrequire 'uk.ac.cam.ch.wwmm.opsin.NameToStructure'
+
+
+
+jrequire 'java.util.List'
+jrequire 'java.util.ArrayList'
+
+jrequire 'java.awt.Rectangle'
+jrequire 'java.awt.image.BufferedImage'
+jrequire 'java.awt.Color'
+jrequire 'javax.imageio.ImageIO'
+
+jrequire 'org.openscience.cdk.renderer.font.AWTFontManager'
+jrequire 'org.openscience.cdk.renderer.generators.BasicSceneGenerator'
+
+jrequire 'org.openscience.cdk.renderer.generators.BasicBondGenerator'
+jrequire 'org.openscience.cdk.renderer.generators.BasicAtomGenerator'
+jrequire 'org.openscience.cdk.renderer.AtomContainerRenderer'
+jrequire 'org.openscience.cdk.renderer.RendererModel'
+jrequire 'org.openscience.cdk.renderer.visitor.AWTDrawVisitor'
+jrequire 'org.openscience.cdk.silent.SilentChemObjectBuilder'
+
+
 
 # The Ruby Chemistry Development Kit.
 module RCDK
-  
+
   # Convenience methods for working with the CDK.
   module Util
-    
+
     # Molecular language translation. Currently molfile, SMILES,
     # and IUPAC nomenclature (read-only) are implemented.
     class Lang
       include Org::Openscience::Cdk
-      include Org::Openscience::Cdk::Io
-      include Java::Io
-      include Uk::Ac::Cam::Ch::Wwmm::Opsin
-      
-      @@mdl_reader = Io::MDLReader.new
-      @@mdl_writer = Io::MDLWriter.new
-      @@smiles_parser = Smiles::SmilesParser.new
-      @@smiles_generator = Smiles::SmilesGenerator.new(DefaultChemObjectBuilder.getInstance)
-      @@cml_reader = nil
-      
-      # Returns a CDK <tt>Molecule</tt> given the String-based molfile
-      # <tt>molfile</tt>.
-      def self.read_molfile(molfile)
-        reader = StringReader.new(molfile)
-        
-        @@mdl_reader.setReader(reader)
-        @@mdl_reader.read(Molecule.new)
-      end
-      
-      # Returns a CDK <tt>Molecule</tt> given the specified <tt>iupac_name</tt>.
-      def self.read_iupac(iupac_name)
-        nts = NameToStructure.getInstance
-        cml = nts.parseToCML(iupac_name)
-        
-        raise "Couldn't parse #{iupac_name}." unless cml
-        
-        string_reader = StringReader.new(cml.toXML)
-        
-        @@cml_reader = CMLReader.new unless @@cml_reader
-        @@cml_reader.setReader(string_reader)
-        
-        chem_file = @@cml_reader.read(ChemFile.new)
-        chem_file.getChemSequence(0).getChemModel(0).getSetOfMolecules.getMolecule(0)
-      end
-      
-      # Returns a String-based molfile by parsing the CDK <tt>molecule</tt>.
-      def self.get_molfile(molecule)
-        writer = StringWriter.new
-        
-        @@mdl_writer.setWriter(writer)
-        @@mdl_writer.writeMolecule(molecule)
-        @@mdl_writer.close
-        
-        writer.toString
-      end
-      
+      #include Org::Openscience::Cdk::Io
+      include Org::Openscience::Cdk::Silent
+      #include Java::Io
+
+      @@smiles_parser = Smiles::SmilesParser.new(SilentChemObjectBuilder.getInstance())
+      #@@smiles_generator = Smiles::SmilesGenerator.new(DefaultChemObjectBuilder.getInstance)
       # Returns a CDK <tt>Molecule</tt> by parsing <tt>smiles</tt>.
       def self.read_smiles(smiles)
         @@smiles_parser.parseSmiles(smiles)
       end
-      
-      # Returns a SMILES string based on the structure of the indicated
-      # CDK <tt>molecule</tt>.
-      def self.get_smiles(molecule)
-        @@smiles_generator.createSMILES(molecule)
-      end
-      
-      # Returns a SMILES string by parsing the <tt>molfile</tt> string.
-      def self.molfile_to_smiles(molfile)
-        get_smiles(read_molfile(molfile))
-      end
-      
-      # Returns a molfiles STRING by parsing <tt>smiles</tt>.
-      def self.smiles_to_molfile(smiles)
-        get_molfile(read_smiles(smiles))
-      end
     end
-    
     # 2-D coordinate generation.
     class XY
-      include Org::Openscience::Cdk     
-      
-      @@sdg = Layout::StructureDiagramGenerator.new    
-      
-      # Assigns 2-D coordinates to the indicated <tt>molfile</tt> string.
-      def self.coordinate_molfile(molfile)
-        mol = coordinate_molecule(Lang.read_molfile(molfile))
-        
-        Lang.get_molfile(mol)
-      end
-      
+      include Org::Openscience::Cdk
+
+      @@sdg = Layout::StructureDiagramGenerator.new
+
       # Assigns 2-D coordinates to the indicated CDK <tt>molecule</tt>.
       def self.coordinate_molecule(molecule)
         @@sdg.setMolecule(molecule)
@@ -136,82 +87,90 @@ module RCDK
         @@sdg.getMolecule
       end
     end
-    
+
     # Raster and SVG 2-D molecular images.
     class Image
-      include Net::Sf::Structure::Cdk::Util
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> PNG image to
-      # <tt>path_to_png</tt> using <tt>molfile</tt>.
-      def self.molfile_to_png(molfile, path_to_png, width, height)
-        ImageKit.writePNG(Lang.read_molfile(molfile), width, height, path_to_png)
+
+      include Org::Openscience::Cdk
+      #include Org::Openscience::Cdk::Io
+      include Org::Openscience::Cdk::Silent
+      include Org::Openscience::Cdk::Renderer::Generators
+      include Org::Openscience::Cdk::Renderer
+      include Org::Openscience::Cdk::Renderer::Font
+      include Org::Openscience::Cdk::Renderer::Visitor
+      #include Java::Io
+      include Java::Awt
+      include Java::Awt::Image
+      include Javax::Imageio
+      include Java::Util
+
+      def self.writePNG(molecule, width, height, path_to_png)
+        drawArea = Rectangle.new(width, height)
+        image = BufferedImage.new(width, height, BufferedImage.TYPE_INT_RGB)
+        generators = ArrayList.new
+        generators.add(BasicSceneGenerator.new)
+        generators.add(BasicBondGenerator.new)
+        generators.add(BasicAtomGenerator.new)
+        renderer = AtomContainerRenderer.new(generators, AWTFontManager.new)
+        renderer.setup(molecule, drawArea)
+        #model = renderer.getRenderer2DModel()
+        #model.set(@@zoom_factor.class, 0.9)
+        #model.set(BasicBondGenerator.BondWidth.class, 5.0)
+        #model.set(BasicSceneGenerator.ZoomFactor.class, 0.9)
+        #model.setZoomFactor(2)
+        #model.setBondWidth(2)
+        #model.setAtomRadius(5)
+        #renderer.setZoom(0.9)
+        diagram = renderer.calculateDiagramBounds(molecule)
+        renderer.setZoomToFit(drawArea.width, drawArea.height, diagram.width, diagram.height)
+
+        g2 = image.getGraphics()
+        g2.setColor(Color.WHITE)
+        g2.fillRect(0, 0, width, height)
+        renderer.paint(molecule, AWTDrawVisitor.new(g2))
+
+        ImageIO.write(image, "PNG", Rjb::import('java.io.File').new(path_to_png))
       end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> SVG document to
-      # <tt>path_to_svg</tt> using <tt>molfile</tt>.
-      def self.molfile_to_svg(molfile, path_to_svg, width, height)
-        ImageKit.writeSVG(Lang.read_molfile(molfile), width, height, path_to_svg)
+
+      def self.writeJPG(molecule, width, height, path_to_jpg)
+        drawArea = Rectangle.new(width, height)
+        image = BufferedImage.new(width, height, BufferedImage.TYPE_INT_RGB)
+        generators = ArrayList.new
+        generators.add(BasicSceneGenerator.new)
+        generators.add(BasicBondGenerator.new)
+        generators.add(BasicAtomGenerator.new)
+        renderer = AtomContainerRenderer.new(generators, AWTFontManager.new)
+        renderer.setup(molecule, drawArea)
+        diagram = renderer.calculateDiagramBounds(molecule)
+        renderer.setZoomToFit(drawArea.width, drawArea.height, diagram.width, diagram.height)
+
+        g2 = image.getGraphics()
+        g2.setColor(Color.WHITE)
+        g2.fillRect(0, 0, width, height)
+        renderer.paint(molecule, AWTDrawVisitor.new(g2))
+        ImageIO.write(image, "jpg", Rjb::import('java.io.File').new(path_to_jpg))
       end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> JPG image to
-      # <tt>path_to_jpg</tt> using <tt>molfile</tt>.
-      def self.molfile_to_jpg(molfile, path_to_jpg, width, height)
-        ImageKit.writeJPG(Lang.read_molfile(molfile), width, height, path_to_jpg)
-      end
-      
+
       # Writes a <tt>width</tt> by <tt>height</tt> PNG image to
       # <tt>path_to_png</tt> using <tt>smiles</tt>. Coordinates are automatically
       # assigned.
       def self.smiles_to_png(smiles, path_to_png, width, height)
         mol = XY.coordinate_molecule(Lang.read_smiles(smiles))
-        
-        ImageKit.writePNG(mol, width, height, path_to_png)
+
+        self.writePNG(mol, width, height, path_to_png)
       end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> SVG document to
-      # <tt>path_to_svg</tt> using <tt>smiles</tt>. Coordinates are automatically
-      # assigned.
-      def self.smiles_to_svg(smiles, path_to_svg, width, height)
-        mol = XY.coordinate_molecule(Lang.read_smiles(smiles))
-        
-        ImageKit.writeSVG(mol, width, height, path_to_svg)
-      end
-      
+
+
       # Writes a <tt>width</tt> by <tt>height</tt> JPG image to
       # <tt>path_to_jpg</tt> using <tt>smiles</tt>. Coordinates are automatically
       # assigned.
       def self.smiles_to_jpg(smiles, path_to_jpg, width, height)
         mol = XY.coordinate_molecule(Lang.read_smiles(smiles))
-        
-        ImageKit.writeJPG(mol, width, height, path_to_jpg)
+
+        self.writeJPG(mol, width, height, path_to_jpg)
       end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> PNG image to
-      # <tt>path_to_png</tt> using <tt>iupac_name</tt>. Coordinates
-      # are automatically assigned.
-      def self.iupac_to_png(iupac_name, path_to_png, width, height)
-        mol = XY.coordinate_molecule(Lang.read_iupac(iupac_name))
-        
-        ImageKit.writePNG(mol, width, height, path_to_png)
-      end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> SVG document to
-      # <tt>path_to_svg</tt> using <tt>iupac_name</tt>. Coordinates
-      # are automatically assigned.
-      def self.iupac_to_svg(iupac_name, path_to_svg, width, height)
-        mol = XY.coordinate_molecule(Lang.read_iupac(iupac_name))
-        
-        ImageKit.writeSVG(mol, width, height, path_to_svg)
-      end
-      
-      # Writes a <tt>width</tt> by <tt>height</tt> JPG image to
-      # <tt>path_to_jpg</tt> using <tt>iupac_name</tt>. Coordinates
-      # are automatically assigned.
-      def self.iupac_to_jpg(iupac_name, path_to_jpg, width, height)
-        mol = XY.coordinate_molecule(Lang.read_iupac(iupac_name))
-        
-        ImageKit.writeJPG(mol, width, height, path_to_jpg)
-      end
+
+
     end
   end
 end

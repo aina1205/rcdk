@@ -24,8 +24,8 @@
 
 require 'rake'
 require 'rake/testtask'
-require 'rake/rdoctask'
-require 'rake/gempackagetask'
+require 'rdoc/task'
+require 'rubygems/package_task'
 
 PKG_VERSION = "0.3.0"
 
@@ -111,7 +111,7 @@ spec = Gem::Specification.new do |s|
                        '--line-numbers'
 end
 
-Rake::GemPackageTask.new(spec) do |gem|
+Gem::PackageTask.new(spec) do |gem|
   gem.need_tar = true
   gem.need_tar_gz = true
   gem.package_files += PKG_FILES
