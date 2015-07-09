@@ -169,7 +169,7 @@ module RCDK
         g2 = image.getGraphics()
         g2.setColor(Color.WHITE)
         g2.fillRect(0, 0, width, height)
-        renderer.paintMolecule(molecule, AWTDrawVisitor.new(g2))
+        renderer.paint(molecule, AWTDrawVisitor.new(g2))
 
         ImageIO.write(image, "PNG", Rjb::import('java.io.File').new(path_to_png))
       end
