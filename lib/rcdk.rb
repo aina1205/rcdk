@@ -23,7 +23,7 @@
 # Boston, MA 02111-1301, USA.
 
 RCDK_VERSION = '0.3.0'
-CDK_VERSION = '1.4.19'
+CDK_VERSION = '1.5.11'
 
 require 'rcdk/java'
 
