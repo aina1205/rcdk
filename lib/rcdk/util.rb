@@ -31,6 +31,7 @@ jrequire 'org.openscience.cdk.DefaultChemObjectBuilder'
 jrequire 'org.openscience.cdk.interfaces.IAtomContainer'
 jrequire 'org.openscience.cdk.interfaces.IAtomContainerSet'
 jrequire 'org.openscience.cdk.layout.StructureDiagramGenerator'
+jrequire 'org.openscience.cdk.layout.OverlapResolver'
 jrequire 'org.openscience.cdk.graph.ConnectivityChecker'
 jrequire 'org.openscience.cdk.templates.MoleculeFactory'
 jrequire 'org.openscience.cdk.AtomContainer'
@@ -91,13 +92,16 @@ module RCDK
       include Javax::Vecmath
       include Java::Awt::Geom
       @@sdg = Layout::StructureDiagramGenerator.new
+      @@overlap_resolver = Layout::OverlapResolver.new
 
       # Assigns 2-D coordinates to the indicated CDK <tt>molecule</tt>.
       def self.coordinate_molecule(molecule)
         if ConnectivityChecker.isConnected(molecule)
           @@sdg.setMolecule(molecule, false)
           @@sdg.generateCoordinates()
-          @@sdg.getMolecule
+          atom_container = @@sdg.getMolecule
+          @@overlap_resolver.resolveOverlap(atom_container, nil)
+          atom_container
         else
           moleculeSet = ConnectivityChecker.partitionIntoMolecules(molecule)
           double_class = Rjb::import("java.awt.geom.Rectangle2D$Double")
@@ -106,6 +110,7 @@ module RCDK
           translated_rect = double_class.new(0, 0, 0, 0)
 
           molecules = AtomContainerSet.new
+
           container_count = moleculeSet.getAtomContainerCount()
           (0..container_count-1).to_a.each do |c|
             mol = moleculeSet.getAtomContainer(c)
@@ -113,7 +118,9 @@ module RCDK
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(mol) unless mol.bonds.iterator.hasNext
             @@sdg.setMolecule(mol, false)
             @@sdg.generateCoordinates()
-            new_mol = translate_molecule(@@sdg.getMolecule, origin_rect, translated_rect, hoffset)
+            atom_container = @@sdg.getMolecule
+            @@overlap_resolver.resolveOverlap(atom_container, nil)
+            new_mol = translate_molecule(atom_container, origin_rect, translated_rect, hoffset)
             molecules.addAtomContainer(new_mol)
           end
           molecules
